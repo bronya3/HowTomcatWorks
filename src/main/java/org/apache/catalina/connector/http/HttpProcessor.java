@@ -1,32 +1,19 @@
 package org.apache.catalina.connector.http;
 
 
-import java.io.EOFException;
-import java.io.InterruptedIOException;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import org.apache.catalina.*;
+import org.apache.catalina.util.*;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.TreeMap;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.apache.catalina.Globals;
-import org.apache.catalina.HttpRequest;
-import org.apache.catalina.Lifecycle;
-import org.apache.catalina.LifecycleException;
-import org.apache.catalina.LifecycleListener;
-import org.apache.catalina.Logger;
-import org.apache.catalina.util.FastHttpDateFormat;
-import org.apache.catalina.util.LifecycleSupport;
-import org.apache.catalina.util.RequestUtil;
-import org.apache.catalina.util.ServerInfo;
-import org.apache.catalina.util.StringManager;
-import org.apache.catalina.util.StringParser;
 
 
 /**
@@ -892,8 +879,11 @@ final class HttpProcessor
 
         keepAlive = true;
 
+        //while 循环用来保持从输入流中读取，直到 HttpProcessor 被停止，一个异常被
+        //抛出或者连接给关闭为止。
         while (!stopped && ok && keepAlive) {
 
+            //把 finishResponse 设置为 true，并获得输出流，并对请求和响应对象做些初始化处理。
             finishResponse = true;
 
             try {
@@ -911,14 +901,19 @@ final class HttpProcessor
 
 
             // Parse the incoming request
+            // 接着，process 方法通过调用 parseConnection，parseRequest 和 parseHeaders 方法开始解析前来的 HTTP 请求。
             try {
                 if (ok) {
 
                     parseConnection(socket);
                     parseRequest(input, output);
+                    //parseConnection方法获得协议的值，像HTTP0.9, HTTP1.0或HTTP1.1。如果协议是HTTP1.0，
+                    //keepAlive 设置为 false，因为 HTTP1.0 不支持持久连接。如果在 HTTP 请求里边找到 Expect:
+                    //100-continue 的头部信息，则 parseHeaders 方法将把 sendAck 设置为 true。
                     if (!request.getRequest().getProtocol()
                         .startsWith("HTTP/0"))
                         parseHeaders(input);
+                    //如果协议是 HTTP1.1，并且 web 客户端发送头部 Expect: 100-continue 的话，通过调用ackRequest 方法它将响应这个头部。
                     if (http11) {
                         // Sending a request acknowledge back to the client if
                         // requested.
@@ -965,6 +960,7 @@ final class HttpProcessor
             }
 
             // Ask our Container to process this request
+            // 在解析过后，process 方法把请求和响应对象传递给容器的 invoke 方法
             try {
                 ((HttpServletResponse) response).setHeader
                     ("Date", FastHttpDateFormat.getCurrentDate());
@@ -994,6 +990,8 @@ final class HttpProcessor
             }
 
             // Finish up the handling of the request
+            // 接着，如果 finishResponse 仍然是 true，响应对象的 finishResponse 方法和请求对象的
+            // finishRequest 方法将被调用，并且结束输出。
             if (finishResponse) {
                 try {
                     response.finishResponse();
@@ -1022,6 +1020,9 @@ final class HttpProcessor
             // We have to check if the connection closure has been requested
             // by the application or the response stream (in case of HTTP/1.0
             // and keep-alive).
+            // while 循环的最后一部分检查响应的 Connection 头部是否已经在 servlet 内部设为 close，
+            // 或者协议是 HTTP1.0.如果是这种情况的话，keepAlive 设置为 false。同样，请求和响应对象接
+            // 着会被回收利用。
             if ( "close".equals(response.getHeader("Connection")) ) {
                 keepAlive = false;
             }
@@ -1035,6 +1036,9 @@ final class HttpProcessor
 
         }
 
+        //在这个场景中，如果keepAlive 是 true 的话，while 循环将会在开头就启动。因为在前
+        //面的解析过程中和容器的 invoke 方法中没有出现错误，或者 HttpProcessor 实例没有被停止。
+        //否则，shutdownInput 方法将会调用，而套接字将被关闭。
         try {
             shutdownInput(input);
             socket.close();

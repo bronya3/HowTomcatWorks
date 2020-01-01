@@ -5,6 +5,14 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * 职责是创建一个服务器套接字
+ * 用来等待前来的 HTTP 请求
+ * run()方法主要做了3件事
+ * 1等待 HTTP 请求
+ * 2为每个请求创建个 HttpProcessor 实例
+ * 3调用 HttpProcessor 的 process 方法
+ */
 public class HttpConnector implements Runnable {
 
     boolean stopped;

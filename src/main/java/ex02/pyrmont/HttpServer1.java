@@ -1,11 +1,11 @@
 package ex02.pyrmont;
 
-import java.net.Socket;
-import java.net.ServerSocket;
-import java.net.InetAddress;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class HttpServer1 {
 
@@ -71,7 +71,7 @@ public class HttpServer1 {
                 shutdown = request.getUri().equals(SHUTDOWN_COMMAND);
             } catch (Exception e) {
                 e.printStackTrace();
-                System.exit(1);
+//                System.exit(1);
             }
         }
     }

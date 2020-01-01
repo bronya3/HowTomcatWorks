@@ -1,7 +1,7 @@
 package ex01.pyrmont;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class Request {
 
@@ -30,6 +30,8 @@ public class Request {
         uri = parseUri(request.toString());
     }
 
+    // 仅仅关注 HTTP 请求的第一部分，请求行
+    // GET /index.html HTTP/1.1
     private String parseUri(String requestString) {
         int index1, index2;
         index1 = requestString.indexOf(' ');
